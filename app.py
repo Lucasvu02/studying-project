@@ -7,7 +7,7 @@ import time
 # =======================
 # CONFIG – Thay ở đây
 # =======================
-API_KEY = "YOUR_API_KEY"  # Thay bằng Arcana / Chat AI API key của bạn
+API_KEY = "423dd43175d8a5afee82b2cc9bc4cc74"  # Thay bằng Arcana / Chat AI API key của bạn
 ARCANA_ID = "quocvinh.vu/UserstestDesktopPraktikumsbericht_offiziell.pdf"  # Thay bằng Arcana ID của bạn
 MODEL = "qwen3-30b-a3b-instruct-2507"
 API_URL = "https://chat-ai.academiccloud.de/v1/chat/completions"
