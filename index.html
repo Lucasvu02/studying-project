@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arcana · PDF Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #141416;
+      --surface2: #1c1c20;
+      --surface3: #242428;
+      --border: rgba(255,255,255,0.07);
+      --border-strong: rgba(255,255,255,0.12);
+      --text: #f0ede8;
+      --text-muted: #7a7875;
+      --text-dim: #4a4845;
+      --accent: #c9a96e;
+      --accent-dim: rgba(201,169,110,0.15);
+      --accent-glow: rgba(201,169,110,0.08);
+      --user-bg: #1e1c28;
+      --user-border: rgba(140,120,200,0.2);
+      --ai-bg: #131410;
+      --sidebar-w: 260px;
+      --radius: 14px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────────── */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ─── SIDEBAR ─────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a07840);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .logo-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border-strong);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+
+    .new-chat-btn:hover {
+      background: var(--surface3);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .new-chat-btn svg { opacity: 0.7; }
+
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 16px 16px 6px;
+    }
+
+    .chat-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface3) transparent;
+    }
+
+    .history-item {
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+
+    .history-item:hover { background: var(--surface2); color: var(--text); }
+    .history-item.active { background: var(--accent-dim); color: var(--accent); }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pdf-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(201,169,110,0.2);
+      border-radius: 10px;
+    }
+
+    .pdf-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent-dim);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+    }
+
+    .pdf-info { overflow: hidden; }
+
+    .pdf-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pdf-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+
+    /* ─── MAIN ─────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─── TOP BAR ──────────────────────────────────────────── */
+    .topbar {
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .topbar-model {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .model-dot {
+      width: 6px;
+      height: 6px;
+      background: #4ade80;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #4ade80;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .topbar-title {
+      flex: 1;
+      text-align: center;
+      font-family: 'Instrument Serif', serif;
+      font-size: 16px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .clear-btn {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text-muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .clear-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+    /* ─── MESSAGES ─────────────────────────────────────────── */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0 24px;
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface3) transparent;
+    }
+
+    /* Welcome screen */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      gap: 20px;
+    }
+
+    .welcome-orb {
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle at 35% 35%, #d4b47e, #8a6030);
+      border-radius: 50%;
+      box-shadow: 0 0 60px rgba(201,169,110,0.25), 0 0 20px rgba(201,169,110,0.1);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .welcome h2 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--text);
+    }
+
+    .welcome p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      max-width: 380px;
+      line-height: 1.7;
+    }
+
+    .suggestion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      max-width: 520px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .suggestion-card {
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.18s;
+      line-height: 1.5;
+    }
+
+    .suggestion-card:hover {
+      background: var(--surface3);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .suggestion-card strong {
+      display: block;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+
+    /* Message row */
+    .message-row {
+      padding: 0 20px;
+      margin: 4px 0;
+      animation: fadeSlideIn 0.3s ease;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .message-row:last-child .message-inner { border-bottom: none; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    .avatar-user {
+      background: linear-gradient(135deg, #4c3d8a, #2d2060);
+      color: #c5b8f0;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+    }
+
+    .avatar-ai {
+      background: linear-gradient(135deg, var(--accent), #7a5020);
+    }
+
+    .message-body { flex: 1; min-width: 0; }
+
+    .message-sender {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    .message-content {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-content.user-content {
+      color: #d5ceef;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .typing-indicator span {
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 1.2s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Error message */
+    .error-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #fca5a5;
+    }
+
+    /* ─── INPUT AREA ───────────────────────────────────────── */
+    .input-area {
+      padding: 14px 20px 18px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .input-box {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 14px 52px 14px 18px;
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      min-height: 52px;
+      max-height: 200px;
+      line-height: 1.6;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .input-box::placeholder { color: var(--text-dim); }
+
+    .input-box:focus {
+      border-color: rgba(201,169,110,0.4);
+      box-shadow: 0 0 0 3px rgba(201,169,110,0.06);
+    }
+
+    .send-btn {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      color: #1a1000;
+    }
+
+    .send-btn:hover { background: #d4b47e; transform: scale(1.05); }
+    .send-btn:disabled { background: var(--surface3); color: var(--text-dim); cursor: not-allowed; transform: none; }
+
+    .input-hint {
+      max-width: 760px;
+      margin: 8px auto 0;
+      font-size: 10.5px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* ─── SCROLLBAR ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--surface2); }
+
+    /* ─── MOBILE ────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .suggestion-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">📜</div>
+        <div class="logo-text">Arc<span>ana</span></div>
+      </div>
+      <button class="new-chat-btn" onclick="newChat()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        New conversation
+      </button>
+    </div>
+
+    <div class="sidebar-section-title">Recent</div>
+    <div class="chat-history" id="historyList"></div>
+
+    <div class="sidebar-footer">
+      <div class="pdf-badge">
+        <div class="pdf-icon">📄</div>
+        <div class="pdf-info">
+          <div class="pdf-name">Praktikumsbericht_offiziell.pdf</div>
+          <div class="pdf-label">Active document</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-model">
+        <span class="model-dot"></span>
+        qwen3-30b-a3b
+      </div>
+      <div class="topbar-title">Ask anything about your document</div>
+      <button class="clear-btn" onclick="clearMessages()">Clear</button>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="messages-area" id="messagesArea">
+      <div class="welcome" id="welcome">
+        <div class="welcome-orb"></div>
+        <h2>What would you like to know?</h2>
+        <p>I've read your document carefully. Ask me anything — summaries, details, specific facts, or analysis.</p>
+        <div class="suggestion-grid">
+          <div class="suggestion-card" onclick="usePrompt(this)">
+            <strong>Summary</strong>
+            Give me a brief overview of this document
+          </div>
+          <div class="suggestion-card" onclick="usePrompt(this)">
+            <strong>Key Points</strong>
+            What are the main findings or conclusions?
+          </div>
+          <div class="suggestion-card" onclick="usePrompt(this)">
+            <strong>Details</strong>
+            What specific topics does this document cover?
+          </div>
+          <div class="suggestion-card" onclick="usePrompt(this)">
+            <strong>Structure</strong>
+            How is this document organized?
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea
+          class="input-box"
+          id="userInput"
+          placeholder="Ask about your document…"
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Arcana answers only based on your uploaded PDF · Press Enter to send</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────────
+  const API_KEY    = "423dd43175d8a5afee82b2cc9bc4cc74";
+  const ARCANA_ID  = "quocvinh.vu/UserstestDesktopPraktikumsbericht_offiziell.pdf";
+  const MODEL      = "qwen3-30b-a3b-instruct-2507";
+  const API_URL    = "https://chat-ai.academiccloud.de/v1/chat/completions";
+  const MAX_TURNS  = 5;
+
+  const SYSTEM_MSG = {
+    role: "system",
+    content: "You are an assistant that ONLY answers questions based on the uploaded Arcana PDF. Do NOT provide information that is not contained in the PDF. If the answer cannot be found in the PDF, reply: 'Sorry, I could not find this information in the document.'"
+  };
+
+  // ── STATE ─────────────────────────────────────────────────
+  let messages = [];
+  let sessions = [];
+  let currentSession = null;
+  let isLoading = false;
+
+  // ── DOM ───────────────────────────────────────────────────
+  const messagesArea = document.getElementById('messagesArea');
+  const userInput    = document.getElementById('userInput');
+  const sendBtn      = document.getElementById('sendBtn');
+  const welcome      = document.getElementById('welcome');
+  const historyList  = document.getElementById('historyList');
+
+  // ── CLEAN OUTPUT ──────────────────────────────────────────
+  function cleanOutput(text) {
+    if (text.includes("References:")) text = text.split("References:")[0];
+    return text.split("\n")
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith("[") && !l.startsWith("!") && !l.startsWith("---"))
+      .filter(l => !(l === l.toUpperCase() && /\d/.test(l)))
+      .join("\n");
+  }
+
+  // ── RENDER MESSAGES ───────────────────────────────────────
+  function renderMessage(role, content, typing = false) {
+    if (welcome && welcome.parentNode) welcome.remove();
+
+    const row = document.createElement('div');
+    row.className = 'message-row';
+    row.innerHTML = `
+      <div class="message-inner">
+        <div class="avatar ${role === 'user' ? 'avatar-user' : 'avatar-ai'}">
+          ${role === 'user' ? 'You' : '📜'}
+        </div>
+        <div class="message-body">
+          <div class="message-sender">${role === 'user' ? 'You' : 'Arcana'}</div>
+          <div class="message-content ${role === 'user' ? 'user-content' : ''}" id="msg-${Date.now()}">
+            ${typing ? '<div class="typing-indicator"><span></span><span></span><span></span></div>' : escapeHtml(content)}
+          </div>
+        </div>
+      </div>`;
+    messagesArea.appendChild(row);
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    return row;
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── SEND ──────────────────────────────────────────────────
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text || isLoading) return;
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    userInput.value = '';
+    userInput.style.height = 'auto';
+
+    messages.push({ role: 'user', content: text });
+    renderMessage('user', text);
+
+    // Typing placeholder
+    const typingRow = renderMessage('ai', '', true);
+    const contentEl = typingRow.querySelector('.message-content');
+
+    // History sidebar
+    if (!currentSession) {
+      currentSession = { id: Date.now(), title: text.slice(0, 38) + (text.length > 38 ? '…' : ''), messages };
+      sessions.unshift(currentSession);
+      renderHistory();
+    }
+
+    const recent = [SYSTEM_MSG, ...messages.slice(-MAX_TURNS * 2)];
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+          'inference-service': 'saia-openai-gateway'
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: recent,
+          'enable-tools': true,
+          arcana: { id: ARCANA_ID },
+          max_tokens: 500
+        })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const raw  = data.choices?.[0]?.message?.content ?? 'No response.';
+      const clean = cleanOutput(raw);
+
+      contentEl.innerHTML = escapeHtml(clean).replace(/\n/g, '<br>');
+      messages.push({ role: 'assistant', content: clean });
+
+    } catch (err) {
+      contentEl.innerHTML = `<div class="error-bubble">⚠️ ${escapeHtml(err.message)}. Check your API key or network.</div>`;
+    }
+
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    isLoading = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+
+  // ── HISTORY ───────────────────────────────────────────────
+  function renderHistory() {
+    historyList.innerHTML = sessions.map((s, i) => `
+      <div class="history-item ${s === currentSession ? 'active' : ''}" onclick="loadSession(${i})">
+        ${escapeHtml(s.title)}
+      </div>`).join('');
+  }
+
+  function loadSession(i) {
+    currentSession = sessions[i];
+    messages = currentSession.messages;
+    // Re-render messages
+    messagesArea.innerHTML = '';
+    messages.forEach(m => renderMessage(m.role, m.content));
+    renderHistory();
+  }
+
+  // ── CONTROLS ──────────────────────────────────────────────
+  function newChat() {
+    currentSession = null;
+    messages = [];
+    messagesArea.innerHTML = '';
+    messagesArea.appendChild(welcome);
+    renderHistory();
+    userInput.focus();
+  }
+
+  function clearMessages() {
+    newChat();
+  }
+
+  function usePrompt(card) {
+    const text = card.querySelector('p, :not(strong)') ? card.textContent.split('\n').filter(t=>t.trim() && !card.querySelector('strong')?.textContent.includes(t.trim())).join(' ').trim() : card.innerText;
+    // Just grab visible text minus the strong label
+    const strong = card.querySelector('strong')?.innerText || '';
+    const prompt = card.innerText.replace(strong, '').trim();
+    userInput.value = prompt;
+    autoResize(userInput);
+    userInput.focus();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+  }
+
+  // ── INIT ──────────────────────────────────────────────────
+  userInput.focus();
+  renderHistory();
+</script>
+</body>
+</html>
